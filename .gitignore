@@ -1,0 +1,16 @@
+logs
+project/project
+project/target
+target
+tmp
+.history
+.env
+.env.sh
+dist
+/.idea
+/*.iml
+/out
+/.idea_modules
+/.classpath
+/.project
+/RUNNING_PID

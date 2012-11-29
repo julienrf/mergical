@@ -1,0 +1,35 @@
+@(content: Html)
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta charset="utf-8">
+        <title>MergiCal</title>
+        <!-- Yes. Twitter Bootstrap. I'm a programmer, not a designer. You can help: julien@@richard-foy.fr. -->
+        <link rel="stylesheet" href="@routes.Assets.at("css/bootstrap.min.css")">
+        <link rel="stylesheet" href="@routes.Assets.at("css/bootstrap-responsive.min.css")">
+        <style type="text/css">
+          article {
+            background-color: #ffffff;
+            padding-bottom: 3em;
+          }
+          footer {
+            background-color: #f5f5f5;
+            border-top: 1px solid #e5e5e5;
+            text-align: center;
+            padding: .5em;
+          }
+          body {
+            background-color: #f5f5f5;
+          }
+        </style>
+    </head>
+    <body>
+        <article>
+          @content
+        </article>
+        <footer class="muted">
+          <small><a href="@routes.Mergical.index">MergiCal</a> &mdash; <a href="mailto:julien@@richard-foy.fr">Julien Richard-Foy</a></small>
+        </footer>
+    </body>
+</html>

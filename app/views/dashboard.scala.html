@@ -1,0 +1,23 @@
+@(user: String, data: play.api.libs.json.JsValue)
+
+@main {
+
+    <div class="navbar navbar-static-top">
+      <div class="navbar-inner">
+        <a class="brand" href="@controllers.routes.Mergical.index">MergiCal</a>
+        <span class="navbar-text pull-right"><a href="@controllers.routes.Mergical.signOut">Sign out</a> (@user)</span>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="dashboard"></div>
+    </div>
+
+    <script src="@routes.Mergical.jsRoutes()"></script>
+    <script src='@routes.Assets.at("js/require.js")'></script>
+    <script>
+      require(['assets/js/factory'], function (factory) {
+        factory.dashboard(@Html(data.toString), document.querySelector('.dashboard'));
+      });
+    </script>
+}

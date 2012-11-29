@@ -1,0 +1,12 @@
+GET     /                           controllers.Mergical.index
+GET     /auth                       controllers.Mergical.authenticate
+GET     /sign-out                   controllers.Mergical.signOut
+GET     /dashboard                  controllers.Mergical.dashboard
+POST    /add                        controllers.Mergical.addFeed(name, url)
+DELETE  /remove                     controllers.Mergical.removeFeed(url)
+GET     /generator                  controllers.Mergical.generator(u, f)
+POST    /generator                  controllers.Mergical.addGenerator
+DELETE  /generator                  controllers.Mergical.removeGenerator(id)
+
+GET     /assets/js/routes.js        controllers.Mergical.jsRoutes
+GET     /assets/*file               controllers.Assets.at(path="/public", file)
