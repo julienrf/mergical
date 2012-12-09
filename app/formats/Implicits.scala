@@ -5,7 +5,7 @@ import play.api.libs.functional.syntax._
 import models._
 import play.api.mvc.RequestHeader
 
-object Implicits {
+/*object Implicits {
 
   implicit val feedFormat: Format[Feed] = (
     (__ \ "name").format[String] and
@@ -14,6 +14,7 @@ object Implicits {
 
 
   implicit val feedSourceFormat: Format[FeedSource] = (
+    (__ \ "_id").format[ObjectId] and
     (__ \ "url").format[String] and
     (__ \ "isPrivate").format[Boolean]
   )(FeedSource.apply _, unlift(FeedSource.unapply _))
@@ -37,3 +38,4 @@ object Implicits {
   )(unlift(User.unapply _))
 
 }
+*/

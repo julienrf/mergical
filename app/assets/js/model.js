@@ -1,25 +1,34 @@
 define(function () {
 
+  var Seq = function (data) {
+    this._items = data.items;
+  };
+  Seq.fn = Seq.prototype;
+  Seq.fn.items = function () {
+    return this._items;
+  };
+  Seq.fn.append = function (item) {
+    this._items.push(item);
+  };
+  Seq.fn.remove = function (item) {
+    this._items = this._items.filter(function (i) { return i !== item });
+  };
+
   /**
    * @param data Attributes
-   * @param {String} data.name
-   * @param {String} data.url
    * @param {Boolean} data.isSelected
    * @param {Boolean} data.isPrivate
+   * @param {Feed} data.feed
    * @constructor
    */
   var GeneratorEntry = function (data) {
-    this._name = data.name;
-    this._url = data.url;
+    this._feed = data.feed
     this._isSelected = data.isSelected;
     this._isPrivate = data.isPrivate;
   };
   GeneratorEntry.fn = GeneratorEntry.prototype;
-  GeneratorEntry.fn.name = function () {
-    return this._name
-  };
-  GeneratorEntry.fn.url = function () {
-    return this._url
+  GeneratorEntry.fn.feed = function () {
+    return this._feed
   };
   GeneratorEntry.fn.isSelected = function (isSelected) {
     if (isSelected !== undefined) {
@@ -38,88 +47,114 @@ define(function () {
 
   /**
    * @param data Attributes
-   * @param {String} data.name Generator name
-   * @param {GeneratorEntry[]} data.entries
+   * @param {String} data.name GeneratorBuilder name
+   * @param {GeneratorEntry[]} data.items
    * @constructor
    */
-  var Generator = function (data) {
+  var GeneratorBuilder = function (data) {
     this._name = data.name;
-    this._entries = data.entries;
+    this._sources = data.sources;
+    this._generators = data.generators;
+    this._items = data.sources.concat(data.generators);
   };
-  Generator.fn = Generator.prototype;
-  Generator.fn.name = function () {
+  GeneratorBuilder.fn = GeneratorBuilder.prototype;
+  GeneratorBuilder.fn.name = function () {
     return this._name
   };
-  Generator.fn.entries = function () {
-    return this._entries
+  GeneratorBuilder.fn.items = function () {
+    return this._items
   };
-  Generator.fn.append = function (entry) {
-    this._entries.push(entry);
+  GeneratorBuilder.fn.sources = function () {
+    return this._sources
   };
-  Generator.fn.remove = function (entry) {
-    this._entries = this._entries.filter(function (e) { return e !== entry });
+  GeneratorBuilder.fn.generators = function () {
+    return this._generators
   };
 
   /**
    * @param data
    * @param {String} data.name
    * @param {String} data.url
+   * @param {Number} data.id
    * @constructor
    */
-  var Feed = function (data) {
+  var Source = function (data) {
+    this._id = data.id;
     this._name = data.name;
     this._url = data.url;
   };
-  Feed.fn = Feed.prototype;
-  Feed.fn.name = function () {
+  Source.fn = Source.prototype;
+  Source.fn.name = function () {
     return this._name
   };
-  Feed.fn.url = function () {
+  Source.fn.url = function () {
     return this._url
   };
+  Source.fn.id = function () {
+    return this._id
+  };
+
+
+  var Reference = function (data) {
+    this._feed = data.feed;
+    this._isPrivate = data.isPrivate;
+  };
+  Reference.fn = Reference.prototype;
+  Reference.fn.feed = function () {
+    return this._feed
+  };
+  Reference.fn.isPrivate = function () {
+    return this._isPrivate
+  }
 
   /**
    * @param data
-   * @param {Feed[]} data.feeds
+   * @param {Number} data.id
+   * @param {String} data.name
+   * @param {Object[]} data.feeds
    * @constructor
    */
-  var Feeds = function (data) {
+  var Generator = function (data) {
+    this._id = data.id;
+    this._name = data.name;
     this._feeds = data.feeds;
   };
-  Feeds.fn = Feeds.prototype;
-  Feeds.fn.feeds = function () {
-    return this._feeds
+  Generator.fn = Generator.prototype;
+  Generator.fn.id = function () {
+    return this._id;
   };
-  Feeds.fn.append = function (feed) {
-    this._feeds.push(feed);
+  Generator.fn.name = function () {
+    return this._name;
   };
-  Feeds.fn.remove = function (feed) {
-    this._feeds = this._feeds.filter(function (f) { return f !== feed });
+  Generator.fn.feeds = function () {
+    return this._feeds;
   };
 
   /**
    * @param data Attributes
-   * @param {Generator} data.generator
-   * @param {Feeds} data.feeds
+   * @param {Seq} data.sources
+   * @param {Seq} data.generators
    * @constructor
    */
   var Dashboard = function (data) {
-    this._generator = data.generator;
-    this._feeds = data.feeds;
+    this._generators = data.generators;
+    this._sources = data.sources;
   };
   Dashboard.fn = Dashboard.prototype;
-  Dashboard.fn.generator = function () {
-    return this._generator
+  Dashboard.fn.generators = function () {
+    return this._generators
   };
-  Dashboard.fn.feeds = function () {
-    return this._feeds
+  Dashboard.fn.sources = function () {
+    return this._sources
   };
 
   return {
     GeneratorEntry: GeneratorEntry,
+    GeneratorBuilder: GeneratorBuilder,
+    Source: Source,
+    Reference: Reference,
     Generator: Generator,
-    Feed: Feed,
-    Feeds: Feeds,
+    Seq: Seq,
     Dashboard: Dashboard
   }
 

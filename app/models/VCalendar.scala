@@ -1,10 +1,8 @@
 package models
 
-import play.api.libs.iteratee._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.ws.WS
 import concurrent.Future
-import language.reflectiveCalls
 
 object VCalendar {
 
@@ -49,21 +47,21 @@ object VCalendar {
     "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:MergiCal\r\n" + calendars.flatten.mkString + "END:VCALENDAR\r\n"
 
   /**
-   * @param generator A feed generator
+   * @param sources List of tuples (source, isPrivate)
    * @return An enumerator of events in the iCalendar format. The first and last elements of the returned enumerator will contain the header and footer of the feed.
    */
-  def apply(generator: GeneratedFeed): Future[String] = {
+  def apply(sources: List[(Source, Boolean)]): Future[String] = {
 
-    val feeds: Seq[Future[Seq[String]]] = for (feed <- generator.feeds) yield {
+    val feeds: Seq[Future[Seq[String]]] = for ((source, isPrivate) <- sources) yield {
 
       // Fetch the iCal feed
-      val rawFeed = WS.url(feed.url).get()
+      val rawFeed = WS.url(source.url).get()
 
       // TODO Get the charset from the response headers
       for (calendar <- rawFeed) yield {
         // Unfold lines and group by events
         val events = groupByEvents(unfold(calendar.body))
-        if (feed.isPrivate) discardPrivateEvents(events) else events
+        if (isPrivate) discardPrivateEvents(events) else events
       }
     }
 

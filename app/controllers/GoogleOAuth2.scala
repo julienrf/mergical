@@ -7,6 +7,7 @@ import play.api.libs.concurrent.Promise
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.Future
 
+// FIXME Use OpenId?
 trait GoogleOAuth2 {
 
   /**

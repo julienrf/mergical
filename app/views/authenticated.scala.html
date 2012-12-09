@@ -1,0 +1,12 @@
+@(user: String)(content: Html)
+
+@main {
+  <div class="navbar navbar-static-top">
+    <div class="navbar-inner">
+      <a class="brand" href="@controllers.routes.Mergical.index">MergiCal</a>
+      <span class="navbar-text pull-right"><a href="@controllers.routes.Mergical.signOut">Sign out</a> (@user)</span>
+    </div>
+  </div>
+
+  @content
+}

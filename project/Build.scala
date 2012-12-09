@@ -7,12 +7,14 @@ object ApplicationBuild extends Build {
     val appVersion      = "1.0-SNAPSHOT"
 
     val appDependencies = Seq(
-      "reactivemongo" %% "reactivemongo" % "0.1-SNAPSHOT" cross CrossVersion.full,
-      "play.modules.reactivemongo" %% "play2-reactivemongo" % "0.1-SNAPSHOT" cross CrossVersion.full
+      "play" % "play-jdbc_2.10" % "2.1-RC1",
+      "com.typesafe" % "slick_2.10.0-RC1" % "0.11.2",
+      "org.slf4j" % "slf4j-nop" % "1.6.4",
+      "postgresql" % "postgresql" % "9.1-901.jdbc4",
+      "org.scalaz" % "scalaz-core_2.10.0-RC2" % "7.0.0-M4"
     )
 
     val main = play.Project(appName, appVersion, appDependencies).settings(
-      resolvers += "sgodbillon" at "https://bitbucket.org/sgodbillon/repository/raw/master/snapshots/",
       scalacOptions += "-feature"
     )
 

@@ -1,4 +1,4 @@
-define(['./el'], function (el) {
+define(['./el.js'], function (el) {
 
   var FeedForm = function (ctl) {
     this.ctl = ctl;
@@ -28,20 +28,34 @@ define(['./el'], function (el) {
     this.nameInput.value = '';
   };
 
+  var GeneratorForm = function (ctl) {
+    this.ctl = ctl;
+    this.name = el('input', { type: 'text', required: 'required', placeholder: 'Name' })();
+    this.button = el('button', { 'class': 'btn' })(
+        el('i', { 'class': 'icon-plus' })()
+    );
+    this.dom = el('form', { 'class': 'form-horizontal control-group' })(
+        this.name,
+        this.button
+    );
+
+    var self = this;
+    this.dom.addEventListener('submit', function (e) {
+      e.preventDefault();
+      ctl.addClicked({ name: self.name.value });
+    });
+  };
+
   var GeneratorEntry = function (ctl, isSelected, name, isPrivate) {
     this.ctl = ctl;
     this.isSelected = el('input', { type: 'checkbox' })();
     this.isSelected.checked = isSelected;
     this.isPrivate = el('input', { type: 'checkbox' })();
     this.isPrivate.checked = isPrivate;
-    var remove = el('button', { 'class': 'btn btn-inverse btn-mini' })(
-        el('i', { 'class': 'icon-trash icon-white' })()
-    );
     this.dom = el('tr')(
         el('td')(this.isSelected),
         el('td')(name),
-        el('td')(this.isPrivate),
-        el('td')(remove)
+        el('td')(this.isPrivate)
     );
 
     this.isSelected.addEventListener('change', function (e) {
@@ -49,9 +63,6 @@ define(['./el'], function (el) {
     });
     this.isPrivate.addEventListener('change', function (e) {
       ctl.privateChanged(e.target.checked);
-    });
-    remove.addEventListener('click', function () {
-      ctl.removeClicked();
     });
   };
   GeneratorEntry.fn = GeneratorEntry.prototype;
@@ -62,35 +73,36 @@ define(['./el'], function (el) {
     this.isPrivate.checked = isPrivate;
   };
 
-  var Generator = function (ctl, entries) {
+  var GeneratorBuilder = function (ctl, name, sources, generators) {
     this.ctl = ctl;
     this.select = new Checkbox(' Select');
     this.lock = new Checkbox(' Lock');
+
     this.table = el('tbody')();
     var table = el('table', { 'class': 'table table-striped table-hover' })(
         el('thead')(
             el('tr')(
                 el('th')(this.select.dom),
                 el('th')('Feed'),
-                el('th')(this.lock.dom),
-                el('th')()
+                el('th')(this.lock.dom)
             )
         ),
         this.table
     );
     var self = this;
-    entries.forEach(function (entry) {
-      self.append(entry);
+    sources.forEach(function (s) {
+      self.table.appendChild(s.dom);
     });
-    this.name = el('input', { type: 'text', required: 'required', placeholder: 'Name' })();
-    this.button = el('button', { 'class': 'btn' })('Generate a feed');
-    var form = el('form', { 'class': 'form-horizontal control-group' })(
-        this.name,
-        this.button
-    );
+    this.table.appendChild(el('tr')(el('hr')()));
+    generators.forEach(function (g) {
+      self.table.appendChild(g.dom);
+    });
+
+    this.button = el('button', { 'class': 'btn' })('Ok');
+
     this.dom = el('div')(
         table,
-        form
+        this.button
     );
 
     this.select.el().addEventListener('change', function (e) {
@@ -99,37 +111,58 @@ define(['./el'], function (el) {
     this.lock.el().addEventListener('change', function (e) {
       ctl.lockChanged(e.target.checked);
     });
-    form.addEventListener('submit', function (e) {
-      e.preventDefault();
-      ctl.generateClicked({ name: self.name.value });
+    this.button.addEventListener('click', function () {
+      ctl.formSubmitted({ name: name });
     });
+
   };
-  Generator.fn = Generator.prototype;
-  Generator.fn.clear = function () {
-    this.name.value = '';
-  };
-  Generator.fn.disable = function () {
+  GeneratorBuilder.fn = GeneratorBuilder.prototype;
+  GeneratorBuilder.fn.disable = function () {
     this.button.disabled = true;
-    this.name.disabled = true;
   };
-  Generator.fn.enable = function () {
+  GeneratorBuilder.fn.enable = function () {
     this.button.disabled = false;
-    this.name.disabled = false;
   };
-  Generator.fn.showSelected = function (state) {
+  GeneratorBuilder.fn.showSelected = function (state) {
     this.select.showState(state);
   };
-  Generator.fn.showLocked = function (state) {
+  GeneratorBuilder.fn.showLocked = function (state) {
     this.lock.showState(state);
   };
-  Generator.fn.append = function (entry) {
-    this.table.appendChild(entry.dom);
-  };
-  Generator.fn.remove = function (entry) {
-    this.table.removeChild(entry.dom);
+
+
+  var Source = function (ctl, name, url) {
+    var remove = el('button', { 'class': 'btn btn-inverse btn-mini' })(
+        el('i', { 'class': 'icon-trash icon-white' })()
+    );
+    this.dom = el('div', { 'class': 'row' })(
+        el('span', { 'class': 'span3' })(name),
+        el('span', { 'class': 'span6' })(url),
+        remove
+    );
+
+    remove.addEventListener('click', function () {
+      ctl.removeClicked();
+    });
   };
 
-  var Feed = function (ctl, name, url) {
+  var Sources = function (ctl, sources, feedForm) {
+    this.ctl = ctl;
+    this.dom = el('div')();
+    this.feedForm = feedForm.dom;
+    this.dom.appendChild(this.feedForm);
+    var self = this;
+    sources.forEach(function (source) { self.append(source) });
+  };
+  Sources.fn = Sources.prototype;
+  Sources.fn.append = function (source) {
+    this.dom.insertBefore(source.dom, this.feedForm);
+  };
+  Sources.fn.remove = function (source) {
+    this.dom.removeChild(source.dom);
+  };
+
+  var Generator = function (ctl, name, url) {
     var remove = el('button', { 'class': 'btn btn-inverse btn-mini' })(
         el('i', { 'class': 'icon-trash icon-white' })()
     );
@@ -146,26 +179,27 @@ define(['./el'], function (el) {
     });
   };
 
-  var Feeds = function (ctl, feeds) {
+  var Generators = function (ctl, generators, form) {
     this.ctl = ctl;
-    this.dom = el('div')();
+    this.form = form.dom;
+    this.dom = el('div')(this.form);
     var self = this;
-    feeds.forEach(function (feed) {
+    generators.forEach(function (feed) {
       self.append(feed);
     })
   };
-  Feeds.fn = Feeds.prototype;
-  Feeds.fn.append = function (feed) {
+  Generators.fn = Generators.prototype;
+  Generators.fn.append = function (generator) {
     var spinner = this.dom.querySelector('.spinner');
     if (spinner !== null) {
       this.dom.removeChild(spinner);
     }
-    this.dom.appendChild(feed.dom);
+    this.dom.insertBefore(generator.dom, this.form);
   };
-  Feeds.fn.remove = function (feed) {
-    this.dom.removeChild(feed.dom);
+  Generators.fn.remove = function (generator) {
+    this.dom.removeChild(generator.dom);
   };
-  Feeds.fn.showSpinner = function () {
+  Generators.fn.showSpinner = function () {
     this.dom.appendChild(
         el('div', { 'class': 'spinner row' })(
             el('div', { 'class': 'progress progress-striped active span9' })(
@@ -178,22 +212,20 @@ define(['./el'], function (el) {
   /**
    * @param ctl
    * @param {FeedForm} feedForm
-   * @param {Generator} generator
-   * @param {Feeds} feeds
+   * @param {GeneratorBuilder} generator
+   * @param {Generators} feeds
    * @param {Element} rootEl
    * @constructor
    */
-  var Dashboard = function (ctl, feedForm, generator, feeds, rootEl) {
+  var Dashboard = function (ctl, sources, generators) {
     this.ctl = ctl;
-    this.dom = rootEl;
-    this.dom.appendChild(el('h1')('\u27A5 Register your calendars feeds'));
-    this.dom.appendChild(feedForm.dom);
-    this.dom.appendChild(el('hr')());
-    this.dom.appendChild(el('h1')('\u27A5 Generate a custom feed'));
-    this.dom.appendChild(generator.dom);
-    this.dom.appendChild(el('hr')());
-    this.dom.appendChild(el('h1')('\u27A5 Share your generated feeds'));
-    this.dom.appendChild(feeds.dom);
+    this.dom = el('div')(
+        el('h1')('\u27A5 Register your iCal sources'),
+        sources.dom,
+        el('hr')(),
+        el('h1')('\u27A5 Generate feeds and share them'),
+        generators.dom
+    )
   };
   Dashboard.fn = Dashboard.prototype;
 
@@ -227,10 +259,13 @@ define(['./el'], function (el) {
 
   return {
     FeedForm: FeedForm,
+    GeneratorForm: GeneratorForm,
     GeneratorEntry: GeneratorEntry,
+    GeneratorBuilder: GeneratorBuilder,
     Generator: Generator,
-    Feed: Feed,
-    Feeds: Feeds,
+    Generators: Generators,
+    Source: Source,
+    Sources: Sources,
     Dashboard: Dashboard,
     Checkbox: Checkbox
   }

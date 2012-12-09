@@ -8,7 +8,7 @@
     <script src='@routes.Assets.at("js/require.js")'></script>
     <script>
       require(['/assets/js/factory.js'], function (factory) {
-        document.querySelector('.container').appendChild(factory.dashboard(@Html(data.toString)).ui.dom);
+        document.querySelector('.container').appendChild(factory.builder(@Html(data.toString)).ui.dom);
       });
     </script>
 }

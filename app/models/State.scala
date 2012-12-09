@@ -1,65 +1,167 @@
 package models
 
-import concurrent.Future
-import concurrent.future
-import play.api.libs.json.{JsArray, Json, JsValue}
-import reactivemongo.api.QueryBuilder
-import reactivemongo.bson.handlers.DefaultBSONHandlers._
-import play.modules.reactivemongo.ReactiveMongoPlugin
-import play.modules.reactivemongo.PlayBsonImplicits._
-import play.api.Play.current
-import play.api.libs.concurrent.Execution.Implicits._
-import formats.Implicits._
+import scala.slick.driver.PostgresDriver.simple._
+import scala.slick.jdbc.StaticQuery.interpolation
 
-object State {
+// BIG TODO Separate queries from their execution (handle sessions properly)
 
-  private lazy val db = ReactiveMongoPlugin.db
-  private lazy val users = db("users")
-  private lazy val generators = db("generators")
+object DB {
+  lazy val db = Database.forDataSource(play.api.db.DB.getDataSource()(play.api.Play.current))
+}
+import DB._
 
-  def userById(id: String): Future[User] =
-    for (maybeJson <- users.find[JsValue](QueryBuilder().query(Json.obj("id" -> id))).headOption) yield {
-      val existingUser = for {
-        json <- maybeJson
-        user <- json.asOpt[User]
-      } yield user
-      existingUser getOrElse User(id, Seq.empty, Seq.empty)
-    }
+case class User(sources: List[Source], generators: List[Generator])
 
-  def addFeed(userId: String, name: String, url: String): Future[Boolean] =
-    for (result <- users.update(Json.obj("id" -> userId), Json.obj("$push" -> Json.obj("feeds" -> Json.obj("name" -> name, "url" -> url))), upsert = true))
-    yield result.ok
+object User {
+  /**
+   * @param userId User id
+   * @return The user data
+   */
+  // FIXME Check that the two requests will return consistent data
+  def byId(userId: String): User = db withSession { implicit s =>
+    User(Source.forUser(userId), Generator.filtering(_.user === userId))
+  }
+}
 
-  // TODO Use a feed identifier instead of its URL
-  def removeFeed(userId: String, url: String): Future[Boolean] =
-    for (result <- users.update(Json.obj("id" -> userId), Json.obj("$pull" -> Json.obj("feeds" -> Json.obj("url" -> url)))))
-    yield result.ok
+sealed trait Feed {
+  def id: Int
+}
 
-  // TODO Really use a feed id
-  def generator(userId: String, feedId: String): Future[Option[GeneratedFeed]] =
-    for (maybeJson <- users.find[JsValue](QueryBuilder().query(Json.obj("id" -> userId))).headOption) yield {
-      for {
-        json <- maybeJson
-        user <- json.asOpt[User]
-        generator <- user.generatedFeeds.find(_.name == feedId)
-      } yield generator
-    }
+object Feed extends Table[Int]("feeds") {
+  def id = column[Int]("id")
+  def create(implicit s: Session): Option[Int] = sql"""INSERT INTO Feeds DEFAULT VALUES RETURNING id""".as[Int].firstOption
+  def * = id
+}
 
-  def addGenerator(userId: String, name: String, entries: Seq[(String, Boolean)]): Future[Boolean] =
+case class Source(id: Int, name: String, url: String) extends Feed
+
+object Source extends Table[(Int, String, String, String)]("sources") {
+  def id = column[Int]("id")
+  def user = column[String]("user_id")
+  def name = column[String]("name")
+  def url = column[String]("url")
+  def * = id ~ user ~ name ~ url
+
+  def tupled(s: (Int, String, String)): Source = Source(s._1, s._2, s._3)
+
+  def forUser(id: String): List[Source] = db withSession { implicit s =>
+    (for (s <- Source if s.user === id) yield (s.id, s.name, s.url)).list map Source.tupled
+  }
+
+  /**
+   * @param user User id
+   * @param name Feed name
+   * @param url iCal feed URL
+   * @return The id of the created source (ore `None` if the operation failed)
+   */
+  def add(user: String, name: String, url: String): Option[Int] = db withSession { implicit s =>
+    // TODO Delete the created feed if something went wrong during the creation of the source
     for {
-      result <- users.update(
-        Json.obj("id" -> userId),
-        Json.obj("$push" -> Json.obj("generatedFeeds" -> Json.obj("name" -> name, "feeds" -> JsArray(for ((url, locked) <- entries) yield Json.obj("url" -> url, "isPrivate" -> locked)))))
-      )
-    } yield result.ok
+      id <- Feed.create
+      insertedRows = Source.insert(id, user, name, url)
+      if insertedRows == 1
+    } yield id
+  }
 
-  // TODO Really use a feed id
-  def removeGenerator(userId: String, generatorId: String): Future[Boolean] =
+  /**
+   * @param user Id of the user owning the feed
+   * @param id Id of the source to remove
+   * @return true if the deletion was successful, false otherwise (for example if the feed to delete was not owned by the given user (han, I’m entangling concerns))
+   */
+  def remove(user: String, id: Int): Boolean = db withSession { implicit s =>
+    Source.where(s => s.user === user && s.id === id).firstOption.isDefined && Feed.where(_.id === id).delete == 1
+  }
+}
+
+case class Generator(id: Int, name: String, feeds: List[Reference]) extends Feed
+
+object Generator extends Table[(Int, String, String)]("generators") {
+  def id = column[Int]("id")
+  def user = column[String]("user_id")
+  def name = column[String]("name")
+  def * = id ~ user ~ name
+
+  def tupled(g: (Int, String, List[Reference])) = Generator(g._1, g._2, g._3)
+
+  def filtering(p: Generator.type => Column[Boolean]): List[Generator] = db withSession { implicit s =>
+    (for {
+      (g, f) <- Generator innerJoin Reference on (_.id === _.generatorId)
+      if p(g)
+    } yield ((g.id, g.name), (f.feedId, f.isPrivate))).list.groupBy(_._1).mapValues(_.map(r => Reference.tupled(r._2))).map { case ((id, name), feeds) => Generator(id, name, feeds) }.to[List]
+  }
+
+  /**
+   * @param id Id of the generator to retrieve
+   * @return The generator, if found, otherwise `None`
+   */
+  def byId(id: Int): Option[Generator] = Generator.filtering(_.id === id).headOption
+
+  /**
+   * @param id Id of the generator to retrieve
+   * @return A list of tuples (source, isPrivate) containing each source the given generator refers
+   */
+  def getSources(id: Int): Option[List[(Source, Boolean)]] = db withSession { implicit s =>
+    for (userId <- Generator.where(_.id === id).map(_.user).firstOption) yield {
+      val user = User.byId(userId)
+      val feeds = user.sources ++ user.generators
+
+      // TODO propagate correctly the isPrivate constraint
+      def collectSources(references: List[Reference], visited: Set[Int]): List[(Source, Boolean)] = {
+        val fs = for {
+          reference <- references
+          if !visited.contains(reference.feedId)
+          feed <- feeds.find(_.id == reference.feedId)
+        } yield (feed, reference.isPrivate)
+        val sources = fs collect { case (s: Source, isPrivate) => (s, isPrivate) }
+        val generators = fs collect { case (g: Generator, isPrivate) => (g, isPrivate) }
+        generators.foldLeft((sources, visited ++ sources.map(_._1.id))) { case ((ss, vs), p) =>
+          (ss ++ collectSources(p._1.feeds, vs), vs + p._1.id)
+        }._1
+      }
+
+      collectSources(Reference.forGenerator(id), Set(id))
+    }
+  }
+
+  /**
+   * @param user User id
+   * @param name Generator name
+   * @param entries Sequence of tuples (feed-id, is-private)
+   * @return The id of the created generator (or `None` if the operation failed)
+   */
+  def add(user: String, name: String, entries: Seq[(Int, Boolean)]): Option[Int] = db withSession { implicit s =>
+    // TODO Remove created rows if something is wrong before the end
     for {
-      result <- users.update(
-        Json.obj("id" -> userId),
-        Json.obj("$pull" -> Json.obj("generatedFeeds" -> Json.obj("name" -> generatorId)))
-      )
-    } yield result.ok
+      id <- Feed.create
+      insertedRows = Generator.insert(id, user, name)
+      if insertedRows == 1
+      insertedRefs = Reference.insertAll((entries map (e => (id, e._1, e._2))): _*)
+      if insertedRefs == Some(entries.size)
+    } yield id
+  }
 
+  /**
+   * @param user Id of the user owning the generator to remove
+   * @param id Id of the generator to remove
+   * @return true if the operation was successful, false otherwise
+   */
+  def remove(user: String, id: Int): Boolean = db withSession { implicit s =>
+    Generator.where(s => s.user === user && s.id === id).firstOption.isDefined && Feed.where(_.id === id).delete == 1
+  }
+
+}
+
+case class Reference(feedId: Int, isPrivate: Boolean)
+
+object Reference extends Table[(Int, Int, Boolean)]("generatorfeeds") {
+  def generatorId = column[Int]("generator_id")
+  def isPrivate = column[Boolean]("is_private")
+  def feedId = column[Int]("feed_id")
+  def * = generatorId ~ feedId ~ isPrivate
+
+  def tupled(r: (Int, Boolean)) = Reference(r._1, r._2)
+
+  def forGenerator(id: Int): List[Reference] = db withSession { implicit s =>
+    (for (r <- Reference if r.generatorId === id) yield (r.feedId, r.isPrivate)).list map Reference.tupled
+  }
 }
