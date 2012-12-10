@@ -4,8 +4,6 @@ project/target
 target
 tmp
 .history
-.env
-.env.sh
 dist
 /.idea
 /*.iml
