@@ -11,7 +11,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.future
 import Serializers._
 
-object Mergical extends Controller with GoogleOAuth2 {
+object Mergical extends Controller with Authentication {
 
   /**
    * Landing page
@@ -121,15 +121,13 @@ object Mergical extends Controller with GoogleOAuth2 {
   /**
    * Authentication configuration
    */
-  val authentication = new Authentication {
+  val authentication = new AuthSettings {
 
-    def RedirectUri(implicit request: RequestHeader) = routes.Mergical.authenticate().absoluteURL()
+    def CallbackUri(implicit request: RequestHeader) = routes.Mergical.signinCallback().absoluteURL()
 
     def onSuccess(implicit request: RequestHeader) = Redirect(routes.Mergical.dashboard())
 
-    override def onUnauthorized(implicit request: RequestHeader) = Redirect(loginUrl)
+    override def onUnauthorized(implicit request: RequestHeader) = Redirect(routes.Mergical.signin())
 
-    val ClientId = Play.configuration.getString("OAUTH_CLIENTID").getOrElse(sys.error("Configuration key 'OAUTH_CLIENTID' is not set!"))
-    val ClientSecret = Play.configuration.getString("OAUTH_CLIENTSECRET").getOrElse(sys.error("Configuration key 'OAUTH_CLIENTSECRET' is not set!"))
   }
 }
