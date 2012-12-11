@@ -1,14 +1,14 @@
 package controllers
 
-import play.api._
+import play.api.Routes
+import play.api.mvc.{Controller, Action, RequestHeader}
 import play.api.data.Form
 import play.api.data.Forms._
-import play.api.mvc._
-import libs.json.{JsString, JsObject, Json}
+import play.api.libs.json.{JsString, JsObject, Json}
 import play.api.Play.current
-import models._
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.future
+import models.{User, Source, Generator, VCalendar}
 import Serializers._
 
 object Mergical extends Controller with Authentication {
@@ -52,7 +52,7 @@ object Mergical extends Controller with Authentication {
    * @param id Id of the feed to remove
    * @return 200 if the operation was successful, otherwise 500
    */
-  def removeFeed(id: Int) = Authenticated { implicit request =>
+  def removeFeed(id: String) = Authenticated { implicit request =>
     if (Source.remove(request.userId, id)) Ok else InternalServerError
   }
 
@@ -60,19 +60,19 @@ object Mergical extends Controller with Authentication {
    * @param id Feed id
    * @return The generated feed
    */
-  def generator(id: Int) = Action { implicit request =>
+  def generator(id: String) = Action { implicit request =>
     Async {
       Generator.getSources(id) match {
-        case Some(feed) => VCalendar(feed).map(Ok(_).as("text/calendar;charset="+implicitly[Codec].charset))
+        case Some(feed) => VCalendar(feed).map(Ok(_).as("text/calendar;charset="+implicitly[play.api.mvc.Codec].charset))
         case None => future(NotFound)
       }
     }
   }
 
-  val generatorForm = Form[(String, Seq[(Int, Boolean)])](tuple(
+  val generatorForm = Form[(String, Seq[(String, Boolean)])](tuple(
     "name" -> nonEmptyText,
     "entries" -> seq(tuple(
-      "feed" -> number,
+      "feed" -> nonEmptyText,
       "private" -> boolean
     ))
   ))
@@ -102,7 +102,7 @@ object Mergical extends Controller with Authentication {
    * @param id Generator id
    * @return 200 if successful, otherwise 500
    */
-  def removeGenerator(id: Int) = Authenticated { implicit request =>
+  def removeGenerator(id: String) = Authenticated { implicit request =>
     if (Generator.remove(request.userId, id)) Ok else InternalServerError
   }
 

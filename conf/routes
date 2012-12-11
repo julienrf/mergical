@@ -3,13 +3,13 @@ GET     /sign-in                    controllers.Mergical.signin
 GET     /sign-in-callback           controllers.Mergical.signinCallback
 GET     /sign-out                   controllers.Mergical.signOut
 GET     /dashboard                  controllers.Mergical.dashboard
-GET     /dashboard/new-feed         controllers.Mergical.addGeneratorForm(name: String)
+GET     /dashboard/new-feed         controllers.Mergical.addGeneratorForm(name)
 POST    /add                        controllers.Mergical.addFeed(name, url)
-DELETE  /remove                     controllers.Mergical.removeFeed(id: Int)
+DELETE  /remove                     controllers.Mergical.removeFeed(id)
 POST    /generator                  controllers.Mergical.addGenerator
-DELETE  /generator                  controllers.Mergical.removeGenerator(id: Int)
+DELETE  /generator                  controllers.Mergical.removeGenerator(id)
 
 GET     /assets/js/routes.js        controllers.Mergical.jsRoutes
 GET     /assets/*file               controllers.Assets.at(path="/public", file)
 
-GET     /:id                        controllers.Mergical.generator(id: Int)
+GET     /:id                        controllers.Mergical.generator(id)
