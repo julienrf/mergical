@@ -4,6 +4,7 @@ import play.api.mvc._
 import play.api.mvc.Results._
 import play.api.libs.openid.OpenID
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.iteratee.{Input, Done}
 
 trait Authentication {
 
@@ -19,10 +20,15 @@ trait Authentication {
    *   }
    * }}}
    */
-  def Authenticated[A](parser: BodyParser[A])(action: AuthenticatedRequest[A] => Result) = Action(parser) { request =>
-    (request.session.get(authentication.UserId), request.session.get(authentication.UserName)) match {
-      case (Some(userId), Some(name)) => action(new AuthenticatedRequest(request, userId, name))
-      case _ => authentication.onUnauthorized(request)
+  def Authenticated[A](parser: BodyParser[A])(result: AuthenticatedRequest[A] => Result) = EssentialAction { headers =>
+    (headers.session.get(authentication.UserId), headers.session.get(authentication.UserName)) match {
+      case (Some(userId), Some(name)) =>
+        parser(headers).mapDone(_ match {
+          case Right(body) => result(new AuthenticatedRequest(Request(headers, body), userId, name))
+          case Left(r) => r
+        })
+      case _ =>
+        Done(authentication.onUnauthorized(headers), Input.Empty)
     }
   }
 
@@ -31,7 +37,7 @@ trait Authentication {
    * @param action Action content
    * @return An authenticated Action
    */
-  def Authenticated(action: AuthenticatedRequest[AnyContent] => Result): Action[AnyContent] =
+  def Authenticated(action: AuthenticatedRequest[AnyContent] => Result): EssentialAction =
     Authenticated(BodyParsers.parse.anyContent)(action)
 
   /**
