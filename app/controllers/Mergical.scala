@@ -77,8 +77,8 @@ object Mergical extends Controller with Authentication {
     ))
   ))
 
-  def addGeneratorForm(name: String) = Authenticated { implicit request =>
-    Ok(views.html.addGeneratorForm(request.username, Json.toJson(User.byId(request.userId)).as[JsObject] + ("name" -> JsString(name))))
+  val addGeneratorForm = Authenticated { implicit request =>
+    Ok(views.html.addGeneratorForm(request.username, Json.toJson(User.byId(request.userId))))
   }
 
   /**

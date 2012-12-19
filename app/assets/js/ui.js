@@ -28,114 +28,21 @@ define(['./el.js'], function (el) {
     this.nameInput.value = '';
   };
 
-  var GeneratorForm = function (ctl) {
-    this.ctl = ctl;
-    this.name = el('input', { type: 'text', required: 'required', placeholder: 'Name' })();
-    this.button = el('button', { 'class': 'btn' })(
-        el('i', { 'class': 'icon-plus' })()
-    );
-    this.dom = el('form', { 'class': 'form-horizontal control-group' })(
-        this.name,
-        this.button
-    );
-
-    var self = this;
-    this.dom.addEventListener('submit', function (e) {
-      e.preventDefault();
-      ctl.addClicked({ name: self.name.value });
-    });
+  var Feed = function () {};
+  Feed.fn = Feed.prototype;
+  Feed.fn.hoverEffect = function (isPrivate) {
+    this.dom.classList.add('referenced' + (isPrivate ? '-private' : ''));
   };
-
-  var GeneratorEntry = function (ctl, isSelected, name, isPrivate) {
-    this.ctl = ctl;
-    this.isSelected = el('input', { type: 'checkbox' })();
-    this.isSelected.checked = isSelected;
-    this.isPrivate = el('input', { type: 'checkbox' })();
-    this.isPrivate.checked = isPrivate;
-    this.dom = el('tr')(
-        el('td')(this.isSelected),
-        el('td')(name),
-        el('td')(this.isPrivate)
-    );
-
-    this.isSelected.addEventListener('change', function (e) {
-      ctl.selectChanged(e.target.checked);
-    });
-    this.isPrivate.addEventListener('change', function (e) {
-      ctl.privateChanged(e.target.checked);
-    });
+  Feed.fn.clearHoverEffect = function () {
+    this.dom.classList.remove('referenced');
+    this.dom.classList.remove('referenced-private');
   };
-  GeneratorEntry.fn = GeneratorEntry.prototype;
-  GeneratorEntry.fn.showSelected = function (isSelected) {
-    this.isSelected.checked = isSelected;
-  };
-  GeneratorEntry.fn.showPrivate = function (isPrivate) {
-    this.isPrivate.checked = isPrivate;
-  };
-
-  var GeneratorBuilder = function (ctl, name, sources, generators) {
-    this.ctl = ctl;
-    this.select = new Checkbox(' Select');
-    this.lock = new Checkbox(' Lock');
-
-    this.table = el('tbody')();
-    var table = el('table', { 'class': 'table table-striped table-hover' })(
-        el('thead')(
-            el('tr')(
-                el('th')(this.select.dom),
-                el('th')('Feed'),
-                el('th')(this.lock.dom)
-            )
-        ),
-        this.table
-    );
-    var self = this;
-    sources.forEach(function (s) {
-      self.table.appendChild(s.dom);
-    });
-    this.table.appendChild(el('tr')(el('hr')()));
-    generators.forEach(function (g) {
-      self.table.appendChild(g.dom);
-    });
-
-    this.button = el('button', { 'class': 'btn' })('Ok');
-
-    this.dom = el('div')(
-        table,
-        this.button
-    );
-
-    this.select.el().addEventListener('change', function (e) {
-      ctl.selectChanged(e.target.checked);
-    });
-    this.lock.el().addEventListener('change', function (e) {
-      ctl.lockChanged(e.target.checked);
-    });
-    this.button.addEventListener('click', function () {
-      ctl.formSubmitted({ name: name });
-    });
-
-  };
-  GeneratorBuilder.fn = GeneratorBuilder.prototype;
-  GeneratorBuilder.fn.disable = function () {
-    this.button.disabled = true;
-  };
-  GeneratorBuilder.fn.enable = function () {
-    this.button.disabled = false;
-  };
-  GeneratorBuilder.fn.showSelected = function (state) {
-    this.select.showState(state);
-  };
-  GeneratorBuilder.fn.showLocked = function (state) {
-    this.lock.showState(state);
-  };
-
 
   var Source = function (ctl, name, url) {
     var remove = el('button', { 'class': 'btn btn-inverse btn-mini' })(
         el('i', { 'class': 'icon-trash icon-white' })()
     );
-    this.dom = el('div', { 'class': 'row' })(
+    this.dom = el('div', { 'class': 'row feed' })(
         el('span', { 'class': 'span3' })(name),
         el('span', { 'class': 'span6' })(url),
         remove
@@ -145,6 +52,8 @@ define(['./el.js'], function (el) {
       ctl.removeClicked();
     });
   };
+  Source.prototype = Object.create(Feed.prototype);
+  Source.fn = Source.prototype;
 
   var Sources = function (ctl, sources, feedForm) {
     this.ctl = ctl;
@@ -166,7 +75,7 @@ define(['./el.js'], function (el) {
     var remove = el('button', { 'class': 'btn btn-inverse btn-mini' })(
         el('i', { 'class': 'icon-trash icon-white' })()
     );
-    this.dom = el('div', { 'class': 'row' })(
+    this.dom = el('div', { 'class': 'row feed' })(
         el('span', { 'class': 'span3' })(name),
         el('span', { 'class': 'span6' })(
             el('a', { href: url })(url)
@@ -177,12 +86,20 @@ define(['./el.js'], function (el) {
     remove.addEventListener('click', function () {
       ctl.removeClicked();
     });
+    this.dom.addEventListener('mouseover', function () {
+      ctl.mouseEntered();
+    });
+    this.dom.addEventListener('mouseout', function () {
+      ctl.mouseLeaved();
+    });
   };
+  Generator.prototype = Object.create(Feed.prototype);
+  Generator.fn = Generator.prototype;
 
-  var Generators = function (ctl, generators, form) {
+  var Generators = function (ctl, generators) {
     this.ctl = ctl;
-    this.form = form.dom;
-    this.dom = el('div')(this.form);
+    this.addLink = el('a', { href: Routes.controllers.Mergical.addGeneratorForm().url, 'class': 'btn' })('Create a feed');
+    this.dom = el('div')(this.addLink);
     var self = this;
     generators.forEach(function (feed) {
       self.append(feed);
@@ -190,16 +107,16 @@ define(['./el.js'], function (el) {
   };
   Generators.fn = Generators.prototype;
   Generators.fn.append = function (generator) {
-    var spinner = this.dom.querySelector('.spinner');
+    /*var spinner = this.dom.querySelector('.spinner');
     if (spinner !== null) {
       this.dom.removeChild(spinner);
-    }
-    this.dom.insertBefore(generator.dom, this.form);
+    }*/
+    this.dom.insertBefore(generator.dom, this.addLink);
   };
   Generators.fn.remove = function (generator) {
     this.dom.removeChild(generator.dom);
   };
-  Generators.fn.showSpinner = function () {
+  /*Generators.fn.showSpinner = function () {
     this.dom.appendChild(
         el('div', { 'class': 'spinner row' })(
             el('div', { 'class': 'progress progress-striped active span9' })(
@@ -207,14 +124,12 @@ define(['./el.js'], function (el) {
             )
         )
     );
-  };
+  };*/
 
   /**
    * @param ctl
-   * @param {FeedForm} feedForm
-   * @param {GeneratorBuilder} generator
-   * @param {Generators} feeds
-   * @param {Element} rootEl
+   * @param {Sources} sources
+   * @param {Generators} generators
    * @constructor
    */
   var Dashboard = function (ctl, sources, generators) {
@@ -257,9 +172,114 @@ define(['./el.js'], function (el) {
   };
 
 
+  var SourceEntry = function (ctl, isSelected, name, isPrivate) {
+    this.ctl = ctl;
+    this.isSelected = el('input', { type: 'checkbox' })();
+    this.isSelected.checked = isSelected;
+    this.isPrivate = el('input', { type: 'checkbox' })();
+    this.isPrivate.checked = isPrivate;
+    this.dom = el('tr')(
+        el('td')(this.isSelected),
+        el('td')(name),
+        el('td')(this.isPrivate)
+    );
+
+    this.isSelected.addEventListener('change', function (e) {
+      ctl.selectChanged(e.target.checked);
+    });
+    this.isPrivate.addEventListener('change', function (e) {
+      ctl.privateChanged(e.target.checked);
+    });
+  };
+  SourceEntry.prototype = Object.create(Feed.prototype);
+  SourceEntry.fn = SourceEntry.prototype;
+  SourceEntry.fn.showSelected = function (isSelected) {
+    this.isSelected.checked = isSelected;
+  };
+  SourceEntry.fn.showPrivate = function (isPrivate) {
+    this.isPrivate.checked = isPrivate;
+  };
+
+  var GeneratorEntry = function (ctl, isSelected, name, isPrivate) {
+    SourceEntry.call(this, ctl, isSelected, name, isPrivate);
+    this.dom.addEventListener('mouseover', function (e) {
+      ctl.mouseEntered();
+    });
+    this.dom.addEventListener('mouseout', function () {
+      ctl.mouseLeaved();
+    });
+  };
+  GeneratorEntry.prototype = Object.create(SourceEntry.prototype);
+  GeneratorEntry.fn = GeneratorEntry.prototype;
+
+  var GeneratorBuilder = function (ctl, sources, generators) {
+    this.ctl = ctl;
+    this.select = new Checkbox(' Select');
+    this.lock = new Checkbox(' Lock');
+
+    this.table = el('tbody')();
+    var table = el('table', { 'class': 'table table-striped table-hover' })(
+        el('thead')(
+            el('tr')(
+                el('th')(this.select.dom),
+                el('th')('Feed'),
+                el('th')(this.lock.dom)
+            )
+        ),
+        this.table
+    );
+    var self = this;
+    sources.forEach(function (s) {
+      self.table.appendChild(s.dom);
+    });
+    this.table.appendChild(el('tr')(el('hr')()));
+    generators.forEach(function (g) {
+      self.table.appendChild(g.dom);
+    });
+
+    this.name = el('input', { type: 'text', required: 'required', placeholder: 'Name' })();
+    this.button = el('button', { 'class': 'btn' })('Ok');
+    this.form = el('form', { 'class': 'form-horizontal control-group' })(
+        this.name,
+        this.button
+    );
+
+    this.dom = el('div')(
+        table,
+        this.form
+    );
+
+    this.select.el().addEventListener('change', function (e) {
+      ctl.selectChanged(e.target.checked);
+    });
+    this.lock.el().addEventListener('change', function (e) {
+      ctl.lockChanged(e.target.checked);
+    });
+    this.form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      ctl.formSubmitted({ name: self.name.value });
+    });
+
+  };
+  GeneratorBuilder.fn = GeneratorBuilder.prototype;
+  GeneratorBuilder.fn.disable = function () {
+    this.button.disabled = true;
+  };
+  GeneratorBuilder.fn.enable = function () {
+    this.button.disabled = false;
+  };
+  GeneratorBuilder.fn.showSelected = function (state) {
+    this.select.showState(state);
+  };
+  GeneratorBuilder.fn.showLocked = function (state) {
+    this.lock.showState(state);
+  };
+
+
+
   return {
     FeedForm: FeedForm,
-    GeneratorForm: GeneratorForm,
+    SourceEntry: SourceEntry,
     GeneratorEntry: GeneratorEntry,
     GeneratorBuilder: GeneratorBuilder,
     Generator: Generator,

@@ -1,12 +1,13 @@
 define(['./ctl.js'], function (ctl) {
 
   /**
+   * @param {Function} factory
    * @param {ctl.Source|ctl.Generator} feed
    * @param {Function} b
    * @return {ctl.GeneratorEntry}
    */
-  var entry = function (feed, b) {
-    return new ctl.GeneratorEntry({
+  var entry = function (factory, feed, b) {
+    return new factory({
       feed: feed,
       isSelected: false,
       isPrivate: false
@@ -16,7 +17,6 @@ define(['./ctl.js'], function (ctl) {
   /**
    * Build a generator builder from a list of entries data
    * @param {Object} data
-   * @param {String} data.name
    * @param {Object[]} data.sources
    * @param {Object[]} data.generators
    * @return {ctl.GeneratorBuilder}
@@ -24,9 +24,9 @@ define(['./ctl.js'], function (ctl) {
   var builder = function (data) {
     var ss = sources(data.sources);
     var self = new ctl.GeneratorBuilder({
-      name: data.name,
-      sources: ss.items().map(function (s) { return entry(s, function () { return self }) }),
-      generators: generators(data.generators, ss.items()).items().map(function (g) { return entry(g, function () { return self }) })
+      name: '',
+      sources: ss.items().map(function (s) { return entry(ctl.SourceEntry, s, function () { return self }) }),
+      generators: generators(data.generators, ss.items()).items().map(function (g) { return entry(ctl.GeneratorEntry, g, function () { return self }) })
     });
     return self
   };
@@ -40,8 +40,8 @@ define(['./ctl.js'], function (ctl) {
    * @return {ctl.Reference}
    */
   var reference = function (data, sources, generators) {
-    var ss = sources.filter(function (s) { return s.id === data.feed });
-    var feed = ss.length !== 0 ? ss[0] : generators.filter(function (g) { return g.id === data.feed })[0];
+    var ss = sources.filter(function (s) { return s.id() === data.feed });
+    var feed = ss.length !== 0 ? ss[0] : generators.filter(function (g) { return g.id() === data.feed })[0];
     return new ctl.Reference({
       isPrivate: data.isPrivate,
       feed: feed

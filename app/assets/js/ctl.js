@@ -31,46 +31,67 @@ define(['./model.js', './ui.js', './ajax.js'], function (model, ui, ajax) {
     });
   };
 
-  var GeneratorForm = function (generators) {
-    this.ui = new ui.GeneratorForm(this);
-    this.generators = generators;
-  };
-  GeneratorForm.fn = GeneratorForm.prototype;
-  GeneratorForm.fn.addClicked = function (data) {
-    window.location = Routes.controllers.Mergical.addGeneratorForm(data.name).url;
-  }
-
   /**
    * @constructor
    */
-  var GeneratorEntry = function (data, builder) {
-    model.GeneratorEntry.call(this, data);
+  var SourceEntry = function (data, builder) {
+    model.FeedEntry.call(this, data);
     this._builder = builder;
-    this.ui = new ui.GeneratorEntry(this, this.isSelected(), this.feed().name(), this.isPrivate());
+    this.ui = new ui.SourceEntry(this, this.isSelected(), this.feed().name(), this.isPrivate());
   };
-  GeneratorEntry.prototype = Object.create(model.GeneratorEntry.prototype);
-  GeneratorEntry.fn = GeneratorEntry.prototype;
-  GeneratorEntry.fn.selectChanged = function (checked) {
+  SourceEntry.prototype = Object.create(model.FeedEntry.prototype);
+  SourceEntry.fn = SourceEntry.prototype;
+  SourceEntry.fn.selectChanged = function (checked) {
     this.isSelected(checked);
     this._builder().entrySelected();
   };
-  GeneratorEntry.fn.privateChanged = function (checked) {
+  SourceEntry.fn.privateChanged = function (checked) {
     this.isPrivate(checked);
     this._builder().entryLocked();
   };
-  GeneratorEntry.fn.isSelected = function (isSelected) {
-    var result = model.GeneratorEntry.fn.isSelected.call(this, isSelected);
+  SourceEntry.fn.isSelected = function (isSelected) {
+    var result = model.FeedEntry.fn.isSelected.call(this, isSelected);
     if (isSelected !== undefined) {
       this.ui.showSelected(this.isSelected());
     }
     return result
   };
-  GeneratorEntry.fn.isPrivate = function (isPrivate) {
-    var result = model.GeneratorEntry.fn.isPrivate.call(this, isPrivate);
+  SourceEntry.fn.isPrivate = function (isPrivate) {
+    var result = model.FeedEntry.fn.isPrivate.call(this, isPrivate);
     if (isPrivate !== undefined) {
       this.ui.showPrivate(this.isPrivate());
     }
     return result
+  };
+  SourceEntry.fn.hoverEffect = function (isPrivate) {
+    this.ui.hoverEffect(isPrivate);
+  };
+  SourceEntry.fn.clearHoverEffect = function () {
+    this.ui.clearHoverEffect();
+  };
+
+  var GeneratorEntry = function (data, builder) {
+    model.FeedEntry.call(this, data);
+    this._builder = builder;
+    this.ui = new ui.GeneratorEntry(this, this.isSelected(), this.feed().name(), this.isPrivate());
+  };
+  GeneratorEntry.prototype = Object.create(SourceEntry.prototype);
+  GeneratorEntry.fn = GeneratorEntry.prototype;
+  GeneratorEntry.fn.mouseEntered = function () {
+    var self = this;
+    this.feed().sources().forEach(function (data) {
+      var entry = self._builder().find(data.source); // TODO Remove that
+      entry.hoverEffect(data.isPrivate);
+    });
+    this.ui.hoverEffect(false);
+  };
+  GeneratorEntry.fn.mouseLeaved = function () {
+    var self = this;
+    this.feed().sources().forEach(function (data) {
+      var entry = self._builder().find(data.source); // TODO Remove that
+      entry.clearHoverEffect();
+    });
+    this.ui.clearHoverEffect();
   };
 
   /**
@@ -79,7 +100,7 @@ define(['./model.js', './ui.js', './ajax.js'], function (model, ui, ajax) {
    */
   var GeneratorBuilder = function (data) {
     model.GeneratorBuilder.call(this, data);
-    this.ui = new ui.GeneratorBuilder(this, this.name(), this.sources().map(function (entry) { return entry.ui }), this.generators().map(function (entry) { return entry.ui }));
+    this.ui = new ui.GeneratorBuilder(this, this.sources().map(function (entry) { return entry.ui }), this.generators().map(function (entry) { return entry.ui }));
     this.updateUi();
   };
   GeneratorBuilder.prototype = Object.create(model.GeneratorBuilder.prototype);
@@ -120,10 +141,15 @@ define(['./model.js', './ui.js', './ajax.js'], function (model, ui, ajax) {
     this.updateLockState();
   };
   GeneratorBuilder.fn.formSubmitted = function (data) {
+    var selectedFeeds = this.items()
+        .filter(function (entry) { return entry.isSelected() });
+    if (selectedFeeds.length == 0) {
+      // Visual feedback?
+      return
+    }
     var route = Routes.controllers.Mergical.addGenerator();
     var postData = { name: data.name };
-    this.items()
-        .filter(function (entry) { return entry.isSelected() })
+    selectedFeeds
         .forEach(function (entry, i) {
           postData['entries['+i+'].feed'] = entry.feed().id();
           postData['entries['+i+'].private'] = entry.isPrivate();
@@ -160,6 +186,13 @@ define(['./model.js', './ui.js', './ajax.js'], function (model, ui, ajax) {
   GeneratorBuilder.fn.entryLocked = function () {
     this.updateLockState();
   };
+  /**
+   * @param {Source} source Source to find
+   * @returns The corresponding entry
+   */
+  GeneratorBuilder.fn.find = function (source) {
+    return this.sources().filter(function (entry) { return entry.feed() === source })[0];
+  };
 
 
   /**
@@ -176,6 +209,12 @@ define(['./model.js', './ui.js', './ajax.js'], function (model, ui, ajax) {
   Source.fn = Source.prototype;
   Source.fn.removeClicked = function () {
     this._seq().remove(this);
+  };
+  Source.fn.hoverEffect = function (isPrivate) {
+    this.ui.hoverEffect(isPrivate);
+  };
+  Source.fn.clearHoverEffect = function () {
+    this.ui.clearHoverEffect();
   };
 
   var Sources = function (data) {
@@ -223,11 +262,22 @@ define(['./model.js', './ui.js', './ajax.js'], function (model, ui, ajax) {
   Generator.fn.removeClicked = function () {
     this._seq().remove(this);
   };
+  Generator.fn.mouseEntered = function () {
+    this.sources().forEach(function (data) {
+      data.source.hoverEffect(data.isPrivate);
+    });
+    this.ui.hoverEffect(false);
+  };
+  Generator.fn.mouseLeaved = function () {
+    this.sources().forEach(function (data) {
+      data.source.clearHoverEffect();
+    })
+    this.ui.clearHoverEffect();
+  };
 
   var Generators = function (data) {
     model.Seq.call(this, data);
-    this.generatorForm = new GeneratorForm(this);
-    this.ui = new ui.Generators(this, this.items().map(function (generator) { return generator.ui }), this.generatorForm.ui);
+    this.ui = new ui.Generators(this, this.items().map(function (generator) { return generator.ui }));
   };
   Generators.prototype = Object.create(model.Seq.prototype);
   Generators.fn = Generators.prototype;
@@ -266,6 +316,7 @@ define(['./model.js', './ui.js', './ajax.js'], function (model, ui, ajax) {
 
   return {
     GeneratorBuilder: GeneratorBuilder,
+    SourceEntry: SourceEntry,
     GeneratorEntry: GeneratorEntry,
     Source: Source,
     Sources: Sources,

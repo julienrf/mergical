@@ -21,23 +21,23 @@ define(function () {
    * @param {Feed} data.feed
    * @constructor
    */
-  var GeneratorEntry = function (data) {
+  var FeedEntry = function (data) {
     this._feed = data.feed
     this._isSelected = data.isSelected;
     this._isPrivate = data.isPrivate;
   };
-  GeneratorEntry.fn = GeneratorEntry.prototype;
-  GeneratorEntry.fn.feed = function () {
+  FeedEntry.fn = FeedEntry.prototype;
+  FeedEntry.fn.feed = function () {
     return this._feed
   };
-  GeneratorEntry.fn.isSelected = function (isSelected) {
+  FeedEntry.fn.isSelected = function (isSelected) {
     if (isSelected !== undefined) {
       this._isSelected = isSelected;
     } else {
       return this._isSelected
     }
   };
-  GeneratorEntry.fn.isPrivate = function (isPrivate) {
+  FeedEntry.fn.isPrivate = function (isPrivate) {
     if (isPrivate !== undefined) {
       this._isPrivate = isPrivate;
     } else {
@@ -47,20 +47,16 @@ define(function () {
 
   /**
    * @param data Attributes
-   * @param {String} data.name GeneratorBuilder name
-   * @param {GeneratorEntry[]} data.items
+   * @param {FeedEntry[]} data.sources
+   * @param {FeedEntry[]} data.generators
    * @constructor
    */
   var GeneratorBuilder = function (data) {
-    this._name = data.name;
     this._sources = data.sources;
     this._generators = data.generators;
     this._items = data.sources.concat(data.generators);
   };
   GeneratorBuilder.fn = GeneratorBuilder.prototype;
-  GeneratorBuilder.fn.name = function () {
-    return this._name
-  };
   GeneratorBuilder.fn.items = function () {
     return this._items
   };
@@ -105,13 +101,13 @@ define(function () {
   };
   Reference.fn.isPrivate = function () {
     return this._isPrivate
-  }
+  };
 
   /**
    * @param data
    * @param {Number} data.id
    * @param {String} data.name
-   * @param {Object[]} data.feeds
+   * @param {Reference[]} data.feeds
    * @constructor
    */
   var Generator = function (data) {
@@ -128,6 +124,25 @@ define(function () {
   };
   Generator.fn.feeds = function () {
     return this._feeds;
+  };
+  /**
+   * @returns {Object[]} Object with a source and a isPrivate properties
+   */
+  Generator.fn.sources = function () {
+    return this.feeds().reduce(function (sources, ref) {
+      var feed = ref.feed();
+      if (feed instanceof Source) {
+        sources.push({
+          source: feed,
+          isPrivate: ref.isPrivate()
+        });
+      } else if (feed instanceof Generator) {
+        feed.sources()
+            .filter(function (s) { return sources.every(function (t) { return t.source.id() !== s.source.id() }) })
+            .forEach(function (s) { sources.push(s) });
+      }
+      return sources
+    }, [])
   };
 
   /**
@@ -149,7 +164,7 @@ define(function () {
   };
 
   return {
-    GeneratorEntry: GeneratorEntry,
+    FeedEntry: FeedEntry,
     GeneratorBuilder: GeneratorBuilder,
     Source: Source,
     Reference: Reference,
