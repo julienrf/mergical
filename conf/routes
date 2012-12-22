@@ -3,7 +3,8 @@ GET     /sign-in                    controllers.Mergical.signin
 GET     /sign-in-callback           controllers.Mergical.signinCallback
 GET     /sign-out                   controllers.Mergical.signOut
 GET     /dashboard                  controllers.Mergical.dashboard
-GET     /dashboard/new-feed         controllers.Mergical.addGeneratorForm
+GET     /dashboard/new              controllers.Mergical.addGeneratorForm
+GET     /dashboard/edit             controllers.Mergical.TODO
 POST    /add                        controllers.Mergical.addFeed(name, url)
 DELETE  /remove                     controllers.Mergical.removeFeed(id)
 POST    /generator                  controllers.Mergical.addGenerator
