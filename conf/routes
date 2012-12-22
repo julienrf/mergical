@@ -5,8 +5,8 @@ GET     /sign-out                   controllers.Mergical.signOut
 GET     /dashboard                  controllers.Mergical.dashboard
 GET     /dashboard/new              controllers.Mergical.addGeneratorForm
 GET     /dashboard/edit             controllers.Mergical.TODO
-POST    /add                        controllers.Mergical.addFeed(name, url)
-DELETE  /remove                     controllers.Mergical.removeFeed(id)
+POST    /source                     controllers.Mergical.addFeed(name, url)
+DELETE  /source                     controllers.Mergical.removeFeed(id)
 POST    /generator                  controllers.Mergical.addGenerator
 DELETE  /generator                  controllers.Mergical.removeGenerator(id)
 
