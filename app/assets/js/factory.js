@@ -68,6 +68,12 @@ define(['./ctl.js'], function (ctl) {
    */
   var generators = function (data, sources) {
 
+    /**
+     * @param {Object} g Generator data
+     * @param {Source[]} sources
+     * @param {Generator[]} visited
+     * @return {Object[]} References of `g` that have not yet been processed
+     */
     var unsortedRefs = function (g, sources, visited) {
       return g.feeds.filter(function (ref) {
         var inSources = function (r) { return sources.some(function (s) { return s.id() === r.feed }) };
@@ -78,6 +84,10 @@ define(['./ctl.js'], function (ctl) {
     };
 
     var sort = function (g, sources, visited) {
+      if (visited.some(function (v) { return v.id() === g.id })) {
+        return visited
+      }
+
       var refs = unsortedRefs(g, sources, visited);
       var gs = refs.length !== 0 ?
           // Some feeds referenced by this generator remain unsorted
