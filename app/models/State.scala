@@ -17,7 +17,6 @@ object User {
    * @param userId User id
    * @return The user data
    */
-  // FIXME Check that the two requests will return consistent data
   def byId(userId: String): User = db withSession { implicit s =>
     User(Source.forUser(userId), Generator.filtering(_.user === userId))
   }
