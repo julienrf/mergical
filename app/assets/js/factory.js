@@ -1,4 +1,4 @@
-define(['./ctl.js'], function (ctl) {
+define(['./ctl.js', './model.js'], function (ctl, model) {
 
   /**
    * @param {Function} factory
@@ -22,11 +22,21 @@ define(['./ctl.js'], function (ctl) {
    * @return {ctl.GeneratorBuilder}
    */
   var builder = function (data) {
-    var ss = sources(data.sources);
-    var self = new ctl.GeneratorBuilder({
+    var f = {
+      Sources: model.Seq,
+      Source: model.Source,
+      Generators: model.Seq,
+      Generator: model.Generator,
+      Reference: model.Reference,
+      GeneratorBuilder: ctl.GeneratorBuilder,
+      SourceEntry: ctl.SourceEntry,
+      GeneratorEntry: ctl.GeneratorEntry
+    };
+    var ss = sources(data.sources, f);
+    var self = new f.GeneratorBuilder({
       name: '',
-      sources: ss.items().map(function (s) { return entry(ctl.SourceEntry, s, function () { return self }) }),
-      generators: generators(data.generators, ss.items()).items().map(function (g) { return entry(ctl.GeneratorEntry, g, function () { return self }) })
+      sources: ss.items().map(function (s) { return entry(f.SourceEntry, s, function () { return self }) }),
+      generators: generators(data.generators, ss.items(), f).items().map(function (g) { return entry(f.GeneratorEntry, g, function () { return self }) })
     });
     return self
   };
@@ -39,10 +49,10 @@ define(['./ctl.js'], function (ctl) {
    * @param {Generator[]} generators
    * @return {ctl.Reference}
    */
-  var reference = function (data, sources, generators) {
+  var reference = function (data, sources, generators, f) {
     var ss = sources.filter(function (s) { return s.id() === data.feed });
     var feed = ss.length !== 0 ? ss[0] : generators.filter(function (g) { return g.id() === data.feed })[0];
-    return new ctl.Reference({
+    return new f.Reference({
       isPrivate: data.isPrivate,
       feed: feed
     })
@@ -53,8 +63,8 @@ define(['./ctl.js'], function (ctl) {
    * @param {Function} seq Owning sequence
    * @return {ctl.Generator}
    */
-  var generator = function (data, seq) {
-    return new ctl.Generator({
+  var generator = function (data, seq, f) {
+    return new f.Generator({
       id: data.id,
       name: data.name,
       feeds: data.feeds
@@ -66,7 +76,7 @@ define(['./ctl.js'], function (ctl) {
    * @param {Source[]} sources
    * @return {ctl.Generators}
    */
-  var generators = function (data, sources) {
+  var generators = function (data, sources, f) {
 
     /**
      * @param {Object} g Generator data
@@ -98,12 +108,12 @@ define(['./ctl.js'], function (ctl) {
       gs.push(generator({
                       id: g.id,
                       name: g.name,
-                      feeds: g.feeds.map(function (data) { return reference(data, sources, gs) })
-                    }, function () { return self }));
+                      feeds: g.feeds.map(function (data) { return reference(data, sources, gs, f) })
+                    }, function () { return self }, f));
       return gs;
     };
 
-    var self = new ctl.Generators({
+    var self = new f.Generators({
       items: data.reduce(function (gs, g) { return sort(g, sources, gs) }, [])
     });
     return self
@@ -116,8 +126,8 @@ define(['./ctl.js'], function (ctl) {
    * @param {String} data.url
    * @return {ctl.Source}
    */
-  var source = function (data, fs) {
-    return new ctl.Source({
+  var source = function (data, fs, f) {
+    return new f.Source({
       id: data.id,
       name: data.name,
       url: data.url
@@ -128,10 +138,10 @@ define(['./ctl.js'], function (ctl) {
    * @param {Object[]} data
    * @return {ctl.Sources}
    */
-  var sources = function (data) {
-    var self = new ctl.Sources({
+  var sources = function (data, f) {
+    var self = new f.Sources({
       items: data.map(function (data) {
-        return source(data, function () { return self })
+        return source(data, function () { return self }, f)
       })
     });
     return self
@@ -145,9 +155,17 @@ define(['./ctl.js'], function (ctl) {
    * @return {ctl.Dashboard} Dashboard
    */
   var dashboard = function (data) {
-    var ss = sources(data.sources);
-    return new ctl.Dashboard({
-      generators: generators(data.generators, ss.items()),
+    var f = {
+      Sources: ctl.Sources,
+      Source: ctl.Source,
+      Generators: ctl.Generators,
+      Generator: ctl.Generator,
+      Reference: ctl.Reference,
+      Dashboard: ctl.Dashboard
+    };
+    var ss = sources(data.sources, f);
+    return new f.Dashboard({
+      generators: generators(data.generators, ss.items(), f),
       sources: ss
     });
   };
