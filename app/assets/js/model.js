@@ -128,6 +128,7 @@ define(function () {
   /**
    * @returns {Object[]} Object with a source and a isPrivate properties
    */
+  // TODO propagate references visibility
   Generator.fn.sources = function () {
     return this.feeds().reduce(function (sources, ref) {
       var feed = ref.feed();

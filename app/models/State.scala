@@ -85,9 +85,11 @@ object Generator extends Table[(Int, String, String)]("generators") {
 
   def filtering(p: Generator.type => Column[Boolean]): List[Generator] = db withSession { implicit s =>
     (for {
-      (g, f) <- Generator innerJoin Reference on (_.id === _.generatorId)
+      (g, f) <- Generator leftJoin Reference on (_.id === _.generatorId)
       if p(g)
-    } yield ((g.id, g.name), (f.feedId, f.isPrivate))).list.groupBy(_._1).mapValues(_.map(r => Reference.tupled(r._2))).map { case ((id, name), feeds) => Generator(Codec.encode(id), name, feeds) }.to[List]
+    } yield ((g.id, g.name), (f.feedId.?, f.isPrivate.?)))
+      .list.groupBy(_._1).mapValues(_.collect { case (_, (Some(feedId), Some(isPrivate))) => Reference(Codec.encode(feedId), isPrivate) })
+      .map { case ((id, name), feeds) => Generator(Codec.encode(id), name, feeds) }.to[List]
   }
 
   /**
@@ -102,21 +104,34 @@ object Generator extends Table[(Int, String, String)]("generators") {
    */
   def getSources(id: String): Option[List[(Source, Boolean)]] = db withSession { implicit s =>
     val dbId = Codec.decode(id)
+    // Fetch all user data because the generator may depend on several sources and other generators
     for (userId <- Generator.where(_.id === dbId).map(_.user).firstOption) yield {
       val user = User.byId(userId)
       val feeds = user.sources ++ user.generators
 
-      // TODO propagate correctly the isPrivate constraint
+      /**
+       * @param references Feed references of the generator
+       * @param visited Feed ids of already visited references
+       * @return The sources of the generator along with a boolean value indicating for each source if it is referenced
+       *         as a private source or not
+       */
       def collectSources(references: List[Reference], visited: Set[String]): List[(Source, Boolean)] = {
+
+        // Get all referenced feeds that weren’t yet visited, along with their visibility (private or not)
         val fs = for {
           reference <- references
           if !visited.contains(reference.feedId)
           feed <- feeds.find(_.id == reference.feedId)
         } yield (feed, reference.isPrivate)
+
+        // Separate source references from generator references
         val sources = fs collect { case (s: Source, isPrivate) => (s, isPrivate) }
         val generators = fs collect { case (g: Generator, isPrivate) => (g, isPrivate) }
-        generators.foldLeft((sources, visited ++ sources.map(_._1.id))) { case ((ss, vs), p) =>
-          (ss ++ collectSources(p._1.feeds, vs), vs + p._1.id)
+
+        // Get sources of referenced generators. The visibility of the generator overrides the visibility of its sources if it is private
+        generators.foldLeft((sources, visited ++ sources.map(_._1.id))) { case ((ss, vs), (g, isPrivate)) =>
+          val visited = vs + g.id
+          (ss ++ collectSources(g.feeds.map(r => if (isPrivate) r.copy(isPrivate = true) else r), visited), visited)
         }._1
       }
 
