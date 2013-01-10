@@ -1,4 +1,4 @@
-define(['./model.js', './ui.js', './ajax.js'], function (model, ui, ajax) {
+define(['model', 'ui', 'ajax'], function (model, ui, ajax) {
 
   /**
    * @param {Function} generator

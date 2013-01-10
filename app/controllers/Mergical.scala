@@ -106,18 +106,6 @@ object Mergical extends Controller with Authentication {
     if (Generator.remove(request.userId, id)) Ok else InternalServerError
   }
 
-  val jsRoutes = Action { implicit request =>
-    Ok(Routes.javascriptRouter("Routes")(
-      routes.javascript.Mergical.addFeed,
-      routes.javascript.Mergical.removeFeed,
-      routes.javascript.Mergical.addGenerator,
-      routes.javascript.Mergical.removeGenerator,
-      routes.javascript.Mergical.generator,
-      routes.javascript.Mergical.addGeneratorForm,
-      routes.javascript.Mergical.dashboard
-    )).as(JAVASCRIPT)
-  }
-
   /**
    * Authentication configuration
    */

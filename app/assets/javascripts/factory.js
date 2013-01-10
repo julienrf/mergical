@@ -1,4 +1,4 @@
-define(['./ctl.js', './model.js'], function (ctl, model) {
+define(['ctl', 'model'], function (ctl, model) {
 
   /**
    * @param {Function} factory

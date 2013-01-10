@@ -1,4 +1,4 @@
-@(user: String)(content: Html)
+@(user: String)(content: Html)(implicit req: RequestHeader)
 
 @main {
   <div class="navbar navbar-static-top">
@@ -8,5 +8,17 @@
     </div>
   </div>
 
+  <div class="container"></div>
+
+  @helper.javascriptRouter("Routes")(
+    routes.javascript.Mergical.addFeed,
+    routes.javascript.Mergical.removeFeed,
+    routes.javascript.Mergical.addGenerator,
+    routes.javascript.Mergical.removeGenerator,
+    routes.javascript.Mergical.generator,
+    routes.javascript.Mergical.addGeneratorForm,
+    routes.javascript.Mergical.dashboard
+  )
+  @helper.requireJs(core = routes.Assets.at("javascripts/require.js").url, module = routes.Assets.at("javascripts/factory").url)
   @content
 }

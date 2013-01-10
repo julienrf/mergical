@@ -1,13 +1,8 @@
-@(user: String, data: play.api.libs.json.JsValue)
+@(user: String, data: play.api.libs.json.JsValue)(implicit req: RequestHeader)
 
 @authenticated(user) {
-
-    <div class="container"></div>
-
-    <script src="@routes.Mergical.jsRoutes()"></script>
-    <script src='@routes.Assets.at("js/require.js")'></script>
     <script>
-      require(['/assets/js/factory.js'], function (factory) {
+      require(['factory'], function (factory) {
         document.querySelector('.container').appendChild(factory.dashboard(@Html(data.toString)).ui.dom);
       });
     </script>

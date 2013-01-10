@@ -10,7 +10,6 @@ DELETE  /source                     controllers.Mergical.removeFeed(id)
 POST    /generator                  controllers.Mergical.addGenerator
 DELETE  /generator                  controllers.Mergical.removeGenerator(id)
 
-GET     /assets/js/routes.js        controllers.Mergical.jsRoutes
 GET     /assets/*file               controllers.Assets.at(path="/public", file)
 
 GET     /:id                        controllers.Mergical.generator(id)

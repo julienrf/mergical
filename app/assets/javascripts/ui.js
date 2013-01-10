@@ -1,4 +1,4 @@
-define(['./el.js'], function (el) {
+define(['el'], function (el) {
 
   var FeedForm = function (ctl) {
     this.ctl = ctl;
