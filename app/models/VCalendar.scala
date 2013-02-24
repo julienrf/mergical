@@ -35,7 +35,7 @@ object VCalendar {
   } yield {
     (for {
       line <- event.split("\\r?\\n")
-      if Seq("BEGIN:VEVENT", "END:VEVENT", "DTSTAMP", "UID", "DTSTART", "DTEND", "DURATION", "FREQ").exists(line.startsWith)
+      if Seq("BEGIN:VEVENT", "END:VEVENT", "DTSTAMP", "UID", "DTSTART", "DTEND", "DURATION", "RRULE").exists(line.startsWith)
     } yield line + "\r\n").mkString
   }
 
