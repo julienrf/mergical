@@ -4,39 +4,20 @@ import play.api.mvc._
 import play.api.mvc.Results._
 import play.api.libs.openid.OpenID
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.iteratee.{Input, Done}
 
 trait Authentication {
 
-  /**
-   * Helper to write secured actions.
-   * The wrapped action `action` will be called only if the current user is authenticated. Otherwise a redirect to the
-   * authentication action will be returned.
-   *
-   * Example of use:
-   * {{{
-   *   def securedAction = Authenticated { request =>
-   *     Ok(...)
-   *   }
-   * }}}
-   */
-  def Authenticated[A](parser: BodyParser[A])(result: AuthenticatedRequest[A] => Result) = EssentialAction { headers =>
-    (headers.session.get(authentication.UserId), headers.session.get(authentication.UserName)) match {
-      case (Some(userId), Some(name)) =>
-        parser(headers).mapDone(_ match {
-          case Right(body) => result(new AuthenticatedRequest(Request(headers, body), userId, name))
-          case Left(r) => r
-        })
-      case _ =>
-        Done(authentication.onUnauthorized(headers), Input.Empty)
-    }
-  }
+  def authInfo(headers: RequestHeader) =
+    for {
+      id <- headers.session.get(authentication.UserId)
+      name <- headers.session.get(authentication.UserName)
+    } yield (id, name)
 
-  /**
-   * Convenient overload using `BodyParsers.parse.anyContent` body parser
-   * @param action Action content
-   * @return An authenticated Action
-   */
+  def Authenticated[A](parser: BodyParser[A])(action: AuthenticatedRequest[A] => Result): EssentialAction =
+    Security.Authenticated(authInfo, authentication.onUnauthorized) {
+      case (id, name) => Action(parser)(request => action(new AuthenticatedRequest(request, id, name)))
+    }
+
   def Authenticated(action: AuthenticatedRequest[AnyContent] => Result): EssentialAction =
     Authenticated(BodyParsers.parse.anyContent)(action)
 
@@ -85,7 +66,7 @@ trait Authentication {
      *   }
      * }}}
      */
-    def signIn(userId: String, username: String)(result: PlainResult)(implicit request: RequestHeader) =
+    def signIn(userId: String, username: String)(result: Result)(implicit request: RequestHeader) =
       result.withSession(request.session + (UserId -> userId) + (UserName -> username))
 
     /**
@@ -99,13 +80,13 @@ trait Authentication {
      * @param result HTTP result holding the session
      * @param request HTTP request holding the session
      */
-    def signOut(result: PlainResult)(implicit request: RequestHeader) =
+    def signOut(result: Result)(implicit request: RequestHeader) =
       result.withSession(request.session - UserId - UserName)
 
     /**
      * @return HTTP result to return if an unauthenticated user tries to access a protected resource
      */
-    def onUnauthorized(implicit request: RequestHeader): Result = Forbidden
+    def onUnauthorized(request: RequestHeader): Result = Forbidden
 
     /**
      * @return HTTP result to return if the authentication process failed

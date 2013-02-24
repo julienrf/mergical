@@ -115,7 +115,7 @@ object Mergical extends Controller with Authentication {
 
     def onSuccess(implicit request: RequestHeader) = Redirect(routes.Mergical.dashboard())
 
-    override def onUnauthorized(implicit request: RequestHeader) = Redirect(routes.Mergical.signin())
+    override def onUnauthorized(request: RequestHeader) = Redirect(routes.Mergical.signin())
 
   }
 }
