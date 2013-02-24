@@ -1,10 +1,9 @@
 package controllers
 
-import play.api.Routes
 import play.api.mvc.{Controller, Action, RequestHeader}
 import play.api.data.Form
 import play.api.data.Forms._
-import play.api.libs.json.{JsString, JsObject, Json}
+import play.api.libs.json.Json
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.future
@@ -63,7 +62,7 @@ object Mergical extends Controller with Authentication {
   def generator(id: String) = Action { implicit request =>
     Async {
       Generator.getSources(id) match {
-        case Some(feed) => VCalendar(feed).map(Ok(_).as("text/calendar;charset="+implicitly[play.api.mvc.Codec].charset))
+        case Some((feed, name)) => VCalendar(feed, name).map(Ok(_).as("text/calendar;charset="+implicitly[play.api.mvc.Codec].charset))
         case None => future(NotFound)
       }
     }

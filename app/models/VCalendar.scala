@@ -43,14 +43,14 @@ object VCalendar {
    * @param calendars A sequence of calendars
    * @return A single calendar containing the events taken from all calendars
    */
-  def merge(calendars: Seq[Seq[String]]): String =
-    "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:MergiCal\r\n" + calendars.flatten.mkString + "END:VCALENDAR\r\n"
+  def merge(name: String)(calendars: Seq[Seq[String]]): String =
+    "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:MergiCal\r\nX-WR-CALNAME:" + name.replace(",", "\\,").replace("\n", "\\\n").replace("\\", "\\\\").replace(";", "\\;") + "\r\n" + calendars.flatten.mkString + "END:VCALENDAR\r\n"
 
   /**
    * @param sources List of tuples (source, isPrivate)
    * @return An enumerator of events in the iCalendar format. The first and last elements of the returned enumerator will contain the header and footer of the feed.
    */
-  def apply(sources: List[(Source, Boolean)]): Future[String] = {
+  def apply(sources: List[(Source, Boolean)], name: String): Future[String] = {
 
     val feeds: Seq[Future[Seq[String]]] = for ((source, isPrivate) <- sources) yield {
 
@@ -66,7 +66,7 @@ object VCalendar {
     }
 
     // Merge all the feeds together
-    Future.sequence(feeds) map merge
+    Future.sequence(feeds) map merge(name)
   }
 
 }

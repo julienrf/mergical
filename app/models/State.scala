@@ -100,12 +100,12 @@ object Generator extends Table[(Int, String, String)]("generators") {
 
   /**
    * @param id Id of the generator to retrieve
-   * @return A list of tuples (source, isPrivate) containing each source the given generator refers
+   * @return A list of tuples (source, isPrivate) containing each source the given generator refers along with the name of the generator
    */
-  def getSources(id: String): Option[List[(Source, Boolean)]] = db withSession { implicit s =>
+  def getSources(id: String): Option[(List[(Source, Boolean)], String)] = db withSession { implicit s =>
     val dbId = Codec.decode(id)
     // Fetch all user data because the generator may depend on several sources and other generators
-    for (userId <- Generator.where(_.id === dbId).map(_.user).firstOption) yield {
+    for ((userId, generatorName) <- Generator.where(_.id === dbId).map(g => (g.user, g.name)).firstOption) yield {
       val user = User.byId(userId)
       val feeds = user.sources ++ user.generators
 
@@ -135,7 +135,7 @@ object Generator extends Table[(Int, String, String)]("generators") {
         }._1
       }
 
-      collectSources(Reference.forGenerator(dbId), Set(id))
+      (collectSources(Reference.forGenerator(dbId), Set(id)), generatorName)
     }
   }
 
