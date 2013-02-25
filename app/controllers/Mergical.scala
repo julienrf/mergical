@@ -13,6 +13,19 @@ import Serializers._
 object Mergical extends Controller with Authentication {
 
   /**
+   * Authentication configuration
+   */
+  val authentication = new AuthSettings {
+
+    def CallbackUri(implicit request: RequestHeader) = routes.Mergical.signinCallback().absoluteURL()
+
+    def onSuccess(implicit request: RequestHeader) = Redirect(routes.Mergical.dashboard())
+
+    override def onUnauthorized(request: RequestHeader) = Redirect(routes.Mergical.signin())
+
+  }
+
+  /**
    * Landing page
    */
   val index = Action {
@@ -103,18 +116,5 @@ object Mergical extends Controller with Authentication {
    */
   def removeGenerator(id: String) = Authenticated { implicit request =>
     if (Generator.remove(request.userId, id)) Ok else InternalServerError
-  }
-
-  /**
-   * Authentication configuration
-   */
-  val authentication = new AuthSettings {
-
-    def CallbackUri(implicit request: RequestHeader) = routes.Mergical.signinCallback().absoluteURL()
-
-    def onSuccess(implicit request: RequestHeader) = Redirect(routes.Mergical.dashboard())
-
-    override def onUnauthorized(request: RequestHeader) = Redirect(routes.Mergical.signin())
-
   }
 }
