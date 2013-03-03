@@ -43,16 +43,16 @@ define(['model', 'ui', 'ajax'], function (model, ui, ajax) {
   SourceEntry.fn = SourceEntry.prototype;
   SourceEntry.fn.selectChanged = function (checked) {
     this.isSelected(checked);
-    this._builder().entrySelected();
   };
   SourceEntry.fn.privateChanged = function (checked) {
+    this.isSelected(true);
     this.isPrivate(checked);
-    this._builder().entryLocked();
   };
   SourceEntry.fn.isSelected = function (isSelected) {
     var result = model.FeedEntry.fn.isSelected.call(this, isSelected);
     if (isSelected !== undefined) {
       this.ui.showSelected(this.isSelected());
+      this._builder().entrySelected();
     }
     return result
   };
@@ -60,6 +60,7 @@ define(['model', 'ui', 'ajax'], function (model, ui, ajax) {
     var result = model.FeedEntry.fn.isPrivate.call(this, isPrivate);
     if (isPrivate !== undefined) {
       this.ui.showPrivate(this.isPrivate());
+      this._builder().entryLocked();
     }
     return result
   };

@@ -22,7 +22,7 @@ define(function () {
    * @constructor
    */
   var FeedEntry = function (data) {
-    this._feed = data.feed
+    this._feed = data.feed;
     this._isSelected = data.isSelected;
     this._isPrivate = data.isPrivate;
   };
