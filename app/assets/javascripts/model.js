@@ -126,19 +126,19 @@ define(function () {
     return this._feeds;
   };
   /**
+   * @param {Boolean} [isPrivate] overrides the visibility of this generator
    * @returns {Object[]} Object with a source and a isPrivate properties
    */
-  // TODO propagate references visibility
-  Generator.fn.sources = function () {
+  Generator.fn.sources = function (isPrivate) {
     return this.feeds().reduce(function (sources, ref) {
       var feed = ref.feed();
       if (feed instanceof Source) {
         sources.push({
           source: feed,
-          isPrivate: ref.isPrivate()
+          isPrivate: isPrivate || ref.isPrivate()
         });
       } else if (feed instanceof Generator) {
-        feed.sources()
+        feed.sources(isPrivate || ref.isPrivate())
             .filter(function (s) { return sources.every(function (t) { return t.source.id() !== s.source.id() }) })
             .forEach(function (s) { sources.push(s) });
       }
