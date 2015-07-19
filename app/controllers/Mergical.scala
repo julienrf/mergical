@@ -1,5 +1,6 @@
 package controllers
 
+import Authentication.Authenticated
 import play.api.mvc.{Controller, Action, RequestHeader}
 import play.api.data.Form
 import play.api.data.Forms._
@@ -10,20 +11,7 @@ import scala.concurrent.future
 import models.{User, Source, Generator, VCalendar}
 import Serializers._
 
-object Mergical extends Controller with Authentication {
-
-  /**
-   * Authentication configuration
-   */
-  val authentication = new AuthSettings {
-
-    def CallbackUri(implicit request: RequestHeader) = routes.Mergical.signinCallback().absoluteURL()
-
-    def onSuccess(implicit request: RequestHeader) = Redirect(routes.Mergical.dashboard())
-
-    override def onUnauthorized(request: RequestHeader) = Redirect(routes.Mergical.signin())
-
-  }
+object Mergical extends Controller {
 
   /**
    * Landing page
@@ -43,7 +31,7 @@ object Mergical extends Controller with Authentication {
    * Sign user out
    */
   val signOut = Action { implicit request =>
-    authentication.signOut(Redirect(routes.Mergical.index()))
+    Authentication.signOut(Redirect(routes.Mergical.index()))
   }
 
   /**

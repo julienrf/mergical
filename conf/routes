@@ -1,6 +1,5 @@
 GET     /                           controllers.Mergical.index
-GET     /sign-in                    controllers.Mergical.signin
-GET     /sign-in-callback           controllers.Mergical.signinCallback
+GET     /auth                       controllers.Authentication.signinCallback
 GET     /sign-out                   controllers.Mergical.signOut
 GET     /dashboard                  controllers.Mergical.dashboard
 GET     /dashboard/new              controllers.Mergical.addGeneratorForm
